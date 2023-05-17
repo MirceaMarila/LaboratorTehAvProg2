@@ -1,120 +1,169 @@
+from collections import namedtuple
 import matplotlib.pyplot as plt
 import networkx as nx
 import random
 
 
-class UndirectedGraph:
+Edge = namedtuple('Edge', ['frm', 'to', 'weight'])
+Vertex = namedtuple('Vertex', ['name', 'nlist', 'parent', 'visited'])
+
+
+class Graph:
    
-   def __init__(self, edges_list=None):
-      if edges_list is None:
-         edges_list = []
-      self.edges = edges_list
+   def __init__(self, edges_list=None, directed=True, weighted=True):
 
-      self.vertices = {}
+      self.edges = []
+      self.vertices = []
+      self.directed = directed
+      self.weighted = weighted
+
       for edge in edges_list:
-         self.add_vertex(edge[0])
-         self.add_vertex(edge[1])
-         self.add_neighbour_to_vertex_and_increase_degrees(edge[0], edge[1])
+         self.edges.append(Edge(edge[0], edge[1], edge[2] if weighted else None))
 
-   def add_neighbour_to_vertex_and_increase_degrees(self, neighbour, vertex):
-      if vertex not in self.vertices[neighbour]["neighbours"]:
-         self.vertices[neighbour]["neighbours"].append(vertex)
-         self.vertices[neighbour]["degree"] += 1
-      if neighbour not in self.vertices[vertex]["neighbours"]:
-         self.vertices[vertex]["neighbours"].append(neighbour)
-         self.vertices[vertex]["degree"] += 1
+      for edge in self.edges:
+         self.add_vertex(edge.frm)
+         self.add_vertex(edge.to)
+         self.add_neighbour_to_vertex(edge.frm, edge.to)
+         if not self.directed:
+            self.add_neighbour_to_vertex(edge.to, edge.frm)
+
+   def get_vertex_by_name(self, name):
+      for vertex in self.vertices:
+         if vertex.name == name:
+            return vertex
+         
+      print(f"Vertex {name} does not exist")
+      return None
+   
+   def get_edge_by_name(self, name):
+      for edge in self.edges:
+         if edge.frm == name[0] and edge.to == name[1]:
+            return edge
+         
+      print(f"Edge {name} does not exist")
+      return None
+
+   def add_neighbour_to_vertex(self, neighbour_name, vertex_name):
+      if vertex_name not in self.get_vertices():
+         print(f"Vertex {vertex_name} does not exist")
+
+      if neighbour_name not in self.get_vertices():
+         print(f"Vertex {neighbour_name} does not exist")
+
+      vertex = self.get_vertex_by_name(vertex_name)
+
+      if neighbour_name not in vertex.nlist:
+         vertex.nlist.append(neighbour_name)
 
    def get_vertices(self):
-      return self.vertices.keys()
+      return [vertex.name for vertex in self.vertices]
    
    def get_edges(self):
-      return self.edges
+      return [[edge.frm, edge.to] for edge in self.edges]
    
-   def add_edge(self, vertex1, vertex2):
-      self.add_vertex(vertex1)
-      self.add_vertex(vertex2)
-      
-      if [vertex1, vertex2] not in self.edges:
-         if vertex1 < vertex2:
-            self.edges.append([vertex1, vertex2])
-         else:
-            self.edges.append([vertex2, vertex1])
-            
-         self.add_neighbour_to_vertex_and_increase_degrees(vertex1, vertex2)
+   def get_weight_of_edge(self, edge_name):
+      if self.weighted:
+         for edge in self.edges:
+            if edge.frm == edge_name[0] and edge.to == edge_name[1]:
+               return edge.weight
 
-   def add_vertex(self, vertex):
-      if vertex not in self.vertices.keys():
-         self.vertices[vertex] = {"neighbours": [],
-                                      "degree": 0}
+         else:
+            print(f"Edge {edge_name} does not exist")
+            return None
+   
+   def add_edge(self, vertex1_name, vertex2_name, weight=None):
+      self.add_vertex(vertex1_name)
+      self.add_vertex(vertex2_name)
+      if self.weighted and weight is None:
+         weight = 0
+      
+      if [vertex1_name, vertex2_name] not in self.get_edges() and [vertex2_name, vertex1_name] not in self.get_edges():
+         if vertex1_name < vertex2_name:
+            self.edges.append(Edge(vertex1_name, vertex2_name, weight))
+         else:
+            self.edges.append(Edge(vertex2_name, vertex1_name, weight))
+            
+         self.add_neighbour_to_vertex(vertex1_name, vertex2_name)
+         if not self.directed:
+            self.add_neighbour_to_vertex(vertex2_name, vertex1_name)
+
+   def add_vertex(self, vertex_name):
+      if vertex_name not in self.get_vertices():
+         self.vertices.append(Vertex(vertex_name, [], None, False))
 
    def get_no_vertices(self):
-      return len(self.vertices.keys())
+      return len(self.vertices)
    
    def get_no_edges(self):
       return len(self.edges)
    
-   def get_degree_of_vertex(self, vertex):
-      if vertex in self.vertices.keys():
-         return self.vertices[vertex]["degree"]
+   def get_degree_of_vertex(self, vertex_name):
+      if vertex_name in self.get_vertices():
+         return len(self.get_vertex_by_name(vertex_name).nlist)
       else:
-         print(f"Vertex {vertex} does not exist")
+         print(f"Vertex {vertex_name} does not exist")
    
-   def get_neighbours_of_vertex(self, vertex):
-      if vertex in self.vertices.keys():
-         return self.vertices[vertex]["neighbours"]
+   def get_neighbours_of_vertex(self, vertex_name):
+      if vertex_name in self.get_vertices():
+         return self.get_vertex_by_name(vertex_name).nlist
       else:
-         print(f"Vertex {vertex} does not exist")
+         print(f"Vertex {vertex_name} does not exist")
 
-   def check_if_vertices_are_neighbours(self, vertex1, vertex2):
-      if vertex1 in self.vertices.keys() and vertex2 in self.vertices.keys() and ([vertex1, vertex2] in self.edges or [vertex2, vertex1] in self.edges):
+   def check_if_vertices_are_neighbours(self, vertex1_name, vertex2_name):
+      if vertex1_name in self.get_neighbours_of_vertex(vertex2_name) or vertex2_name in self.get_neighbours_of_vertex(vertex1_name):
          return True
       return False
    
-   def delete_vertex(self, vertex):
-      neighbours = self.vertices[vertex]["neighbours"]
-      self.vertices.pop(vertex)
+   def delete_vertex(self, vertex_name):
+      if vertex_name in self.get_vertices():
+         vertex = self.get_vertex_by_name(vertex_name)
+         neighbours = vertex.nlist
+         self.vertices.pop(vertex)
 
-      for neighbor in neighbours:
-         self.vertices[neighbor]["neighbours"].remove(vertex)
-         self.vertices[neighbor]["degree"] -= 1
+         for neighbor_name in neighbours:
+            neighbor = self.get_neighbor_by_name(neighbor_name)
+            neighbor.nlist.remove(vertex_name)
+      
+      else:
+         print(f"Vertex {vertex_name} does not exist")
    
-   def delete_edge(self, edge):
-      if edge in self.edges:
-         self.vertices[edge[0]]["neighbours"].remove(edge[1])
-         self.vertices[edge[0]]["degree"] -= 1
-         self.vertices[edge[1]]["neighbours"].remove(edge[0])
-         self.vertices[edge[1]]["degree"] -= 1
-         self.edges.remove(edge)
+   def delete_edge(self, edge_name):
+      if edge_name in self.get_edges():
+         self.get_vertex_by_name(edge_name[0]).nlist.remove(edge_name[1])
+
+         if not self.directed:
+            self.get_vertex_by_name(edge_name[1]).nlist.remove(edge_name[0])
+
+         self.edges.remove(self.get_edge_by_name(edge_name))
+         print(f"Edge {edge_name} was deleted")
          
       else:
-         print(f"Edge {edge} does not exist")
+         print(f"Edge {edge_name} does not exist")
 
-   def contract_edge(self, edge):
-      if edge in self.edges:
-         self.edges.remove(edge)
-         vertex2_neighbours = self.vertices[edge[1]]["neighbours"]
-         for vertex in vertex2_neighbours:
-            if vertex not in self.vertices[edge[0]]["neighbours"] and vertex != edge[0]:
-               self.vertices[edge[0]]["neighbours"].append(vertex)
-               self.vertices[edge[0]]["degree"] += 1
+   def contract_edge(self, edge_name):
+      if edge_name in self.get_edges():
+         self.edges.remove(self.get_edge_by_name(edge_name))
+         vertex2_neighbours = self.get_vertex_by_name(edge_name[1]).nlist
+         for vertex_name in vertex2_neighbours:
+            if vertex_name not in self.get_vertex_by_name(edge_name[0]).nlist and vertex_name != edge_name[0]:
+               self.get_vertex_by_name(edge_name[0]).nlist.append(vertex_name)
 
-               if edge[0] < vertex:
-                  self.edges.append([edge[0], vertex])
+               if edge_name[0] < vertex_name:
+                  self.edges.append(Edge(edge_name[0], vertex_name, edge_name[2] if self.weighted else None))
                else:
-                  self.edges.append([vertex, edge[0]])
+                  self.edges.append(Edge(vertex_name, edge_name[0], edge_name[2] if self.weighted else None))
             
-            if [vertex, edge[1]] in self.edges and vertex != edge[0]:
-               self.edges.remove([vertex, edge[1]])
+            if [vertex_name, edge_name[1]] in self.get_edges() and vertex_name != edge_name[0]:
+               self.edges.remove(self.get_edge_by_name([vertex_name, edge_name[1]]))
 
-            if [edge[1], vertex] in self.edges and vertex != edge[0]:
-               self.edges.remove([edge[1], vertex])
+            if [edge_name[1], vertex_name] in self.get_edges() and vertex_name != edge_name[0]:
+               self.edges.remove(self.get_edge_by_name([edge_name[1], vertex_name]))
 
-         self.vertices[edge[0]]["neighbours"].remove(edge[1])
-         self.vertices[edge[0]]["degree"] -= 1
-         self.vertices.pop(edge[1])
+         self.get_vertex_by_name(edge_name[0]).nlist.remove(edge_name[1])
+         self.vertices.pop(self.get_vertex_by_name(edge_name[1]))
 
       else:
-         print(f"Edge {edge} does not exist")
+         print(f"Edge {edge_name} does not exist")
 
    def draw_graph(self, specific_vertex=None):
       G=nx.Graph()
@@ -123,7 +172,7 @@ class UndirectedGraph:
       used_pos_y = []
 
       if specific_vertex is None:
-         for vertex in self.vertices.keys():
+         for vertex in self.get_vertices():
             G.add_node(str(vertex))
 
             x = random.uniform(1, 10000000000)
@@ -138,10 +187,10 @@ class UndirectedGraph:
             used_pos_y.append(y)
 
 
-         for edge in self.edges:
+         for edge in self.get_edges:
             G.add_edge(str(edge[0]), str(edge[1]))
 
-      elif specific_vertex in self.vertices.keys():
+      elif specific_vertex in self.get_vertices():
          G.add_node(str(specific_vertex))
          x = random.uniform(1, 10000000000)
          y = random.uniform(1, 10000000000)
@@ -149,7 +198,7 @@ class UndirectedGraph:
          used_pos_y.append(y)
          pos[str(specific_vertex)] = (x, y)
 
-         for vertex in self.vertices[specific_vertex]["neighbours"]:
+         for vertex in self.get_vertex_by_name(specific_vertex).nlist:
             G.add_node(str(vertex))
             G.add_edge(str(specific_vertex), str(vertex))
 
@@ -170,24 +219,30 @@ class UndirectedGraph:
       plt.margins(0.2)
       plt.show()
 
-# with open('input.txt') as file:
-with open('facebook_combined.txt') as file:
-   lines = file.readlines()
-   edges_list = []
-   for line in lines:
-      vertex1 = line.strip().split(' ')[0]
-      vertex2 = line.strip().split(' ')[1]
-      edges_list.append([int(vertex1), int(vertex2)])
 
-graph = UndirectedGraph(edges_list)
-print("get_vertices()", graph.get_vertices())
-print("get_edges()", graph.get_edges())
-print("get_no_vertices()", graph.get_no_vertices())
-print("get_no_edges()", graph.get_no_edges())
-print("get_degree_of_vertex(3926)", graph.get_degree_of_vertex(3926))
-print("get_neighbours_of_vertex(3926)", graph.get_neighbours_of_vertex(3926))
-print("check_if_vertices_are_neighbours(0, 1)", graph.check_if_vertices_are_neighbours(0, 1))
-graph.contract_edge([0, 1])
-print("check_if_vertices_are_neighbours(0, 1)", graph.check_if_vertices_are_neighbours(0, 1))
-print("check_if_vertices_are_neighbours(0, 2345)", graph.check_if_vertices_are_neighbours(0, 2345))
-graph.draw_graph()
+if __name__ == "__main__":
+   # with open('input.txt') as file:
+   with open('facebook_combined.txt') as file:
+      lines = file.readlines()
+      edges_list = []
+      for line in lines:
+         vertex1 = line.strip().split(' ')[0]
+         vertex2 = line.strip().split(' ')[1]
+         if len(line.strip().split(' ')) > 2:
+            weight = int(line.strip().split(' ')[2])
+         else:
+            weight = None
+         edges_list.append([int(vertex1), int(vertex2), weight])
+
+   graph = Graph(edges_list, directed=True, weighted=True)
+   print("get_vertices()", graph.get_vertices())
+   print("get_edges()", graph.get_edges())
+   print("get_no_vertices()", graph.get_no_vertices())
+   print("get_no_edges()", graph.get_no_edges())
+   print("get_degree_of_vertex(3926)", graph.get_degree_of_vertex(3926))
+   print("get_neighbours_of_vertex(3926)", graph.get_neighbours_of_vertex(3926))
+   print("check_if_vertices_are_neighbours(0, 1)", graph.check_if_vertices_are_neighbours(0, 1))
+   graph.contract_edge([0, 1])
+   print("check_if_vertices_are_neighbours(0, 1)", graph.check_if_vertices_are_neighbours(0, 1))
+   print("check_if_vertices_are_neighbours(0, 2345)", graph.check_if_vertices_are_neighbours(0, 2345))
+   graph.draw_graph()

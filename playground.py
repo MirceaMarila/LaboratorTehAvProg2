@@ -1,3 +1,3 @@
-a= [1,2,3,4]
-
-print(a[:int(len(a)/2)])
+dictt = {1: 1, 2:2}
+dictt.pop(2)
+print(dictt)
