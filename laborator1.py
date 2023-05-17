@@ -205,57 +205,31 @@ class Graph:
         plt.show()
 
 
-def cealapa(edges_list):
-    graph = Graph(edges_list, directed=False, weighted=False)
-    graph.get_no_vertices()
-    graph.get_no_edges()
-    graph.get_degrees_of_vertex(6)
-    graph.get_neighbours_of_vertex(6)
-    graph.check_if_vertices_are_neighbours(0, 999)
-    graph.delete_edge([6, 0])
-    # graph.delete_vertex(6
-    graph.get_neighbours_of_vertex(6)
-    graph.get_neighbours_of_vertex(319)
-    graph.contract_edge([6, 319])
-    graph.get_neighbours_of_vertex(6)
+def bfs(graph: Graph):
+    pass
+
+
+def read_from_file(name):
+    with open(name) as file:
+        lines = file.readlines()
+        edges_list = []
+        for line in lines:
+            split_line = line.strip().split(' ')
+            vertex1 = split_line[0]
+            vertex2 = split_line[1]
+            if len(split_line) > 2:
+                edges_list.append([int(vertex1), int(vertex2), int(split_line[2])])
+            else:
+                edges_list.append([int(vertex1), int(vertex2), None])
+
+    return edges_list
 
 
 if __name__ == "__main__":
     run = input("run ?\n")
 
     if run == "fb":
-        with open('facebook_combined.txt') as file:
-            lines = file.readlines()
-            edges_list = []
-            for line in lines:
-                split_line = line.strip().split(' ')
-                vertex1 = split_line[0]
-                vertex2 = split_line[1]
-                if len(split_line) > 2:
-                    edges_list.append([int(vertex1), int(vertex2), int(split_line[2])])
-                else:
-                    edges_list.append([int(vertex1), int(vertex2), None])
-
-        # graph = Graph(edges_list, directed=False, weighted=False)
-        # print("get_rtices()", graph.get_vertices())
-        # print("get_ges()", graph.get_edges())
-        # print("get__vertices()", graph.get_no_vertices())
-        # print("get__edges()", graph.get_no_edges())
-        # print("get_gree_of_vertex(3926)", graph.get_degrees_of_vertex(3926))
-        # print("get_ighbours_of_vertex(3926)", graph.get_neighbours_of_vertex(3926))
-        # print("checif_vertices_are_neighbours(0, 1)", graph.check_if_vertices_are_neighbours(0, 1))
-        # print("checif_vertices_are_neighbours(1912, 2603)", graph.check_if_vertices_are_neighbours(1912, 2603))
-        # print(graph.get_neighbours_of_vertex(6))
-        # print(graph.get_neighbours_of_vertex(319))
-        # graph.contract_edge([6, 319])
-        # print(graph.get_neighbours_of_vertex(6))
-        # print(graph.get_neighbours_of_vertex(319))
-        # graph.delete_edge([1912, 2603])
-        # graph.delete_vertex(2)
-        # print("check_if_vertices_are_neighbours(0, 1)", graph.check_if_vertices_are_neighbours(0, 1))
-        # print("check_if_vertices_are_neighbours(1912, 2603)", graph.check_if_vertices_are_neighbours(1912, 2603))
-        # graph.draw_graph()
-
+        edges_list = read_from_file('facebook_combined.txt')
         graph = Graph(edges_list, directed=False, weighted=False)
         print(graph.get_no_vertices())
         print(graph.get_no_edges())
@@ -270,18 +244,7 @@ if __name__ == "__main__":
         print(graph.get_neighbours_of_vertex(6))
 
     elif run == "test":
-        with open('input.txt') as file:
-            lines = file.readlines()
-            edges_list = []
-            for line in lines:
-                split_line = line.strip().split(' ')
-                vertex1 = split_line[0]
-                vertex2 = split_line[1]
-                if len(split_line) > 2:
-                    edges_list.append([int(vertex1), int(vertex2), int(split_line[2])])
-                else:
-                    edges_list.append([int(vertex1), int(vertex2), None])
-
+        edges_list = read_from_file('input.txt')
         graph = Graph(edges_list, directed=False, weighted=False)
         graph.contract_edge([0, 1])
         graph.draw_graph()
