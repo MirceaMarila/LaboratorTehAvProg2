@@ -132,7 +132,6 @@ class Graph:
         for neighbour in in_neigh:
             if edge[0] != neighbour:
                 self.add_neighbour_to_vertex(edge[0], neighbour)
-            self.delete_neighbour_from_vertex(neighbour, edge[1])
             self.delete_edge([neighbour, edge[1]])
             if edge[0] != neighbour:
                 self.add_edge(neighbour, edge[0], deleted_edge[2])
@@ -140,7 +139,6 @@ class Graph:
         for neighbour in out_neigh:
             if edge[0] != neighbour:
                 self.add_neighbour_to_vertex(edge[0], neighbour)
-            self.delete_neighbour_from_vertex(neighbour, edge[1])
             self.delete_edge([edge[1], neighbour])
 
             if edge[0] != neighbour:
@@ -207,6 +205,21 @@ class Graph:
         plt.show()
 
 
+def cealapa(edges_list):
+    graph = Graph(edges_list, directed=False, weighted=False)
+    graph.get_no_vertices()
+    graph.get_no_edges()
+    graph.get_degrees_of_vertex(6)
+    graph.get_neighbours_of_vertex(6)
+    graph.check_if_vertices_are_neighbours(0, 999)
+    graph.delete_edge([6, 0])
+    # graph.delete_vertex(6
+    graph.get_neighbours_of_vertex(6)
+    graph.get_neighbours_of_vertex(319)
+    graph.contract_edge([6, 319])
+    graph.get_neighbours_of_vertex(6)
+
+
 if __name__ == "__main__":
     run = input("run ?\n")
 
@@ -223,7 +236,7 @@ if __name__ == "__main__":
                 else:
                     edges_list.append([int(vertex1), int(vertex2), None])
 
-        graph = Graph(edges_list, directed=False, weighted=False)
+        # graph = Graph(edges_list, directed=False, weighted=False)
         # print("get_rtices()", graph.get_vertices())
         # print("get_ges()", graph.get_edges())
         # print("get__vertices()", graph.get_no_vertices())
@@ -242,6 +255,8 @@ if __name__ == "__main__":
         # print("check_if_vertices_are_neighbours(0, 1)", graph.check_if_vertices_are_neighbours(0, 1))
         # print("check_if_vertices_are_neighbours(1912, 2603)", graph.check_if_vertices_are_neighbours(1912, 2603))
         # graph.draw_graph()
+
+        graph = Graph(edges_list, directed=False, weighted=False)
         print(graph.get_no_vertices())
         print(graph.get_no_edges())
         print(graph.get_degrees_of_vertex(6))
@@ -267,6 +282,6 @@ if __name__ == "__main__":
                 else:
                     edges_list.append([int(vertex1), int(vertex2), None])
 
-        graph = Graph(edges_list, directed=True, weighted=False)
+        graph = Graph(edges_list, directed=False, weighted=False)
         graph.contract_edge([0, 1])
         graph.draw_graph()
