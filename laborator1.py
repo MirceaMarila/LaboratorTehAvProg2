@@ -1,4 +1,4 @@
-from multiprocessing import Process, Lock
+from multiprocessing import Process
 from multiprocessing.managers import BaseManager
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -231,6 +231,8 @@ def bfs(graph, start_node):
                 queue.append(node)
                 visited[node] = True
 
+            print(node)
+
     return result
 
 
@@ -238,9 +240,8 @@ class MyManager(BaseManager):
     pass
 
 
-def delete_ingoing_edges(shared_memory: Graph, lock: Lock, node, in_neigh):
-    with lock:
-        shared_memory.delete_edge([in_neigh, node])
+def delete_ingoing_edges(shared_memory: Graph, node, in_neigh):
+    shared_memory.delete_edge([in_neigh, node])
 
 
 def pbfs(graph, directed, weighted, start_node):
@@ -254,7 +255,6 @@ def pbfs(graph, directed, weighted, start_node):
     MyManager.register("Graph", Graph)
     with MyManager() as my_manager:
         shared_memory = my_manager.Graph(directed=directed, weighted=weighted, graph=graph)
-        lock = Lock()
 
         while queue:
             vertex = queue.pop(0)
@@ -264,7 +264,7 @@ def pbfs(graph, directed, weighted, start_node):
                 processes = list()
 
                 for in_neigh in shared_memory.get_vertices_obj()[node]["in_neigh"]:
-                    p = Process(target=delete_ingoing_edges, args=(shared_memory, lock, node, in_neigh))
+                    p = Process(target=delete_ingoing_edges, args=(shared_memory, node, in_neigh))
                     processes.append(p)
 
                 for p in processes:
@@ -277,7 +277,8 @@ def pbfs(graph, directed, weighted, start_node):
                     queue.append(node)
                     visited[node] = True
 
-                print(shared_memory.get_edges())
+                # print(shared_memory.get_edges())
+                print(node)
 
     return result
 
@@ -321,17 +322,21 @@ if __name__ == "__main__":
     if run == "fb":
         edges_list = read_from_file('facebook_combined.txt')
         graph = Graph(edges_list, directed=False, weighted=False)
-        print(graph.get_no_vertices())
-        print(graph.get_no_edges())
-        print(graph.get_degrees_of_vertex(6))
-        print(graph.get_neighbours_of_vertex(6))
-        print(graph.check_if_vertices_are_neighbours(0, 999))
-        graph.delete_edge([6, 0])
-        # graph.delete_vertex(6)
-        print(graph.get_neighbours_of_vertex(6))
-        print(graph.get_neighbours_of_vertex(319))
-        print(graph.contract_edge([6, 319]))
-        print(graph.get_neighbours_of_vertex(6))
+        # print(bfs(graph, 0))
+        from timeit import timeit
+        print(timeit(lambda: pbfs(graph, True, False, 0), number=1))
+        # print(pbfs(graph, True, False, 0))
+        # print(graph.get_no_vertices())
+        # print(graph.get_no_edges())
+        # print(graph.get_degrees_of_vertex(6))
+        # print(graph.get_neighbours_of_vertex(6))
+        # print(graph.check_if_vertices_are_neighbours(0, 999))
+        # graph.delete_edge([6, 0])
+        # # graph.delete_vertex(6)
+        # print(graph.get_neighbours_of_vertex(6))
+        # print(graph.get_neighbours_of_vertex(319))
+        # print(graph.contract_edge([6, 319]))
+        # print(graph.get_neighbours_of_vertex(6))
 
     elif run == "test":
         edges_list = read_from_file('input.txt')
@@ -339,7 +344,4 @@ if __name__ == "__main__":
         print(pbfs(graph, True, False, 1))
         # print(dfs(graph, 1))
 
-        # import ctypes
-        # myObj: Graph = ctypes.cast(graphid, ctypes.py_object).value
-        # print(myObj.get_edges())
-
+# https://drive.google.com/drive/folders/1oMW20ug1mHug7HxvY_FJkOzpqL3hkw38
