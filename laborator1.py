@@ -1,4 +1,4 @@
-from multiprocessing import Process
+from multiprocessing import Process, Pool, cpu_count
 from multiprocessing.managers import BaseManager
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -240,6 +240,9 @@ class MyManager(BaseManager):
     pass
 
 
+MyManager.register("Graph", Graph)
+
+
 def delete_ingoing_edges(shared_memory: Graph, node, in_neigh):
     shared_memory.delete_edge([in_neigh, node])
 
@@ -252,7 +255,7 @@ def pbfs(graph, directed, weighted, start_node):
     queue.append(start_node)
     visited[start_node] = True
 
-    MyManager.register("Graph", Graph)
+    # MyManager.register("Graph", Graph)
     with MyManager() as my_manager:
         shared_memory = my_manager.Graph(directed=directed, weighted=weighted, graph=graph)
 
@@ -279,6 +282,37 @@ def pbfs(graph, directed, weighted, start_node):
 
                 # print(shared_memory.get_edges())
                 print(node)
+
+    return result
+
+
+def poolbfs(graph, directed, weighted, start_node):
+
+    visited = [False] * (len(graph.edges) + 1)
+    queue = []
+    result = []
+    queue.append(start_node)
+    visited[start_node] = True
+    # MyManager.register("Graph", Graph)
+
+    with Pool(cpu_count()) as poll:
+        with MyManager() as my_manager:
+            shared_memory = my_manager.Graph(directed=directed, weighted=weighted, graph=graph)
+
+            while queue:
+                vertex = queue.pop(0)
+                result.append(vertex)
+
+                for node in shared_memory.get_vertices_obj()[vertex]["out_neigh"]:
+
+                    poll.starmap(delete_ingoing_edges, [(shared_memory, node, in_neigh) for in_neigh in shared_memory.get_vertices_obj()[node]["in_neigh"]])
+
+                    if visited[node] is False:
+                        queue.append(node)
+                        visited[node] = True
+
+                    print(shared_memory.get_edges())
+                    # print(node)
 
     return result
 
@@ -341,7 +375,9 @@ if __name__ == "__main__":
     elif run == "test":
         edges_list = read_from_file('input.txt')
         graph = Graph(edges_list, directed=True, weighted=False)
-        print(pbfs(graph, True, False, 1))
+        print(poolbfs(graph, True, False, 1))
         # print(dfs(graph, 1))
+
+
 
 # https://drive.google.com/drive/folders/1oMW20ug1mHug7HxvY_FJkOzpqL3hkw38
