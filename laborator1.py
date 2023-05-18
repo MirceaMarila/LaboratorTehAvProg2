@@ -295,7 +295,17 @@ def poolbfs(graph, directed, weighted, start_node):
     visited[start_node] = True
     # MyManager.register("Graph", Graph)
 
-    with Pool(cpu_count()) as poll:
+    average = 0
+    count = 0
+    for node in graph.vertices.keys():
+        for out_neigh in graph.vertices[node]["out_neigh"]:
+            for in_neigh in graph.vertices[out_neigh]["in_neigh"]:
+                average += in_neigh
+            count += len(graph.vertices[out_neigh]["in_neigh"])
+
+    no_processes = min(int(average/count), cpu_count())
+
+    with Pool(no_processes) as pool:
         with MyManager() as my_manager:
             shared_memory = my_manager.Graph(directed=directed, weighted=weighted, graph=graph)
 
@@ -305,14 +315,14 @@ def poolbfs(graph, directed, weighted, start_node):
 
                 for node in shared_memory.get_vertices_obj()[vertex]["out_neigh"]:
 
-                    poll.starmap(delete_ingoing_edges, [(shared_memory, node, in_neigh) for in_neigh in shared_memory.get_vertices_obj()[node]["in_neigh"]])
+                    pool.starmap(delete_ingoing_edges, [(shared_memory, node, in_neigh) for in_neigh in shared_memory.get_vertices_obj()[node]["in_neigh"]])
 
                     if visited[node] is False:
                         queue.append(node)
                         visited[node] = True
 
-                    print(shared_memory.get_edges())
-                    # print(node)
+                    # print(shared_memory.get_edges())
+                    print(node)
 
     return result
 
@@ -355,10 +365,10 @@ if __name__ == "__main__":
 
     if run == "fb":
         edges_list = read_from_file('facebook_combined.txt')
-        graph = Graph(edges_list, directed=False, weighted=False)
+        graph = Graph(edges_list, directed=True, weighted=False)
         # print(bfs(graph, 0))
         from timeit import timeit
-        print(timeit(lambda: pbfs(graph, True, False, 0), number=1))
+        print(timeit(lambda: poolbfs(graph, True, False, 0), number=10))
         # print(pbfs(graph, True, False, 0))
         # print(graph.get_no_vertices())
         # print(graph.get_no_edges())
@@ -375,7 +385,10 @@ if __name__ == "__main__":
     elif run == "test":
         edges_list = read_from_file('input.txt')
         graph = Graph(edges_list, directed=True, weighted=False)
-        print(poolbfs(graph, True, False, 1))
+        from timeit import timeit
+
+        print(timeit(lambda: poolbfs(graph, True, False, 1), number=10))
+        # print(poolbfs(graph, True, False, 1))
         # print(dfs(graph, 1))
 
 
