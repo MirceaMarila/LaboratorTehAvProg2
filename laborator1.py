@@ -1,3 +1,5 @@
+from multiprocessing import Process, Lock
+from multiprocessing.managers import BaseManager
 import matplotlib.pyplot as plt
 import networkx as nx
 import random
@@ -6,18 +8,26 @@ import copy
 
 class Graph:
 
-    def __init__(self, edges_list, directed, weighted):
-        self.edges: list = copy.deepcopy(edges_list)
-        self.vertices = {}
-        self.directed = directed
-        self.weighted = weighted
+    def __init__(self, edges_list=None, directed=True, weighted=True, graph=None):
+        if graph:
+            self.vertices = graph.vertices
+            self.edges = graph.edges
 
-        for edge in edges_list:
-            self.add_vertex(edge[0])
-            self.add_vertex(edge[1])
-            self.add_neighbour_to_vertex(edge[0], edge[1])
-            if not self.directed:
-                self.edges.append([edge[1], edge[0], edge[2]])
+        else:
+            self.edges: list = copy.deepcopy(edges_list)
+            self.vertices = {}
+            self.directed = directed
+            self.weighted = weighted
+
+            for edge in edges_list:
+                self.add_vertex(edge[0])
+                self.add_vertex(edge[1])
+                self.add_neighbour_to_vertex(edge[0], edge[1])
+                if not self.directed:
+                    self.edges.append([edge[1], edge[0], edge[2]])
+
+    def get_vertices_obj(self):
+        return self.vertices
 
     def add_neighbour_to_vertex(self, vertex, neighbour):
 
@@ -59,7 +69,7 @@ class Graph:
 
     def add_vertex(self, vertex):
         if vertex not in self.vertices.keys():
-            self.vertices[vertex] = {"in_neigh": [], "out_neigh": [], "visited": False, "parent": None}
+            self.vertices[vertex] = {"in_neigh": [], "out_neigh": []}
 
     def get_no_vertices(self):
         return len(self.vertices.keys())
@@ -205,8 +215,88 @@ class Graph:
         plt.show()
 
 
-def bfs(graph: Graph):
+def bfs(graph, start_node):
+    visited = [False] * (len(graph.edges) + 1)
+    queue = []
+    result = []
+    queue.append(start_node)
+    visited[start_node] = True
+
+    while queue:
+        vertex = queue.pop(0)
+        result.append(vertex)
+
+        for node in graph.vertices[vertex]["out_neigh"]:
+            if visited[node] is False:
+                queue.append(node)
+                visited[node] = True
+
+    return result
+
+
+class MyManager(BaseManager):
     pass
+
+
+def delete_ingoing_edges(shared_memory: Graph, lock: Lock, node, in_neigh):
+    with lock:
+        shared_memory.delete_edge([in_neigh, node])
+
+
+def pbfs(graph, directed, weighted, start_node):
+
+    visited = [False] * (len(graph.edges) + 1)
+    queue = []
+    result = []
+    queue.append(start_node)
+    visited[start_node] = True
+
+    MyManager.register("Graph", Graph)
+    with MyManager() as my_manager:
+        shared_memory = my_manager.Graph(directed=directed, weighted=weighted, graph=graph)
+        lock = Lock()
+
+        while queue:
+            vertex = queue.pop(0)
+            result.append(vertex)
+
+            for node in shared_memory.get_vertices_obj()[vertex]["out_neigh"]:
+                processes = list()
+
+                for in_neigh in shared_memory.get_vertices_obj()[node]["in_neigh"]:
+                    p = Process(target=delete_ingoing_edges, args=(shared_memory, lock, node, in_neigh))
+                    processes.append(p)
+
+                for p in processes:
+                    p.start()
+
+                for p in processes:
+                    p.join()
+
+                if visited[node] is False:
+                    queue.append(node)
+                    visited[node] = True
+
+                print(shared_memory.get_edges())
+
+    return result
+
+
+def dfs(graph, vertex):
+
+    def dfs_util(graph, vertex, visited, result):
+        visited.add(vertex)
+        result.append(vertex)
+
+        for neighbour in graph.vertices[vertex]["out_neigh"]:
+            if neighbour not in visited:
+                dfs_util(graph, neighbour, visited, result)
+
+        return result
+
+    visited = set()
+    result = []
+    return dfs_util(graph, vertex, visited, result)
 
 
 def read_from_file(name):
@@ -245,6 +335,11 @@ if __name__ == "__main__":
 
     elif run == "test":
         edges_list = read_from_file('input.txt')
-        graph = Graph(edges_list, directed=False, weighted=False)
-        graph.contract_edge([0, 1])
-        graph.draw_graph()
+        graph = Graph(edges_list, directed=True, weighted=False)
+        print(pbfs(graph, True, False, 1))
+        # print(dfs(graph, 1))
+
+        # import ctypes
+        # myObj: Graph = ctypes.cast(graphid, ctypes.py_object).value
+        # print(myObj.get_edges())
+
